@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.api.constants import (FULL_AMOUNT_TOO_LOW,
                                INVALID_OPERATIONS_DESCRIPTION,
@@ -16,6 +16,7 @@ from app.api.validators import (check_charity_project_exists,
                                 check_name_duplicate,
                                 check_project_has_no_investments,
                                 check_project_not_closed)
+from app.core.user import current_superuser
 from app.crud.charity_project import charity_project_crud
 from app.crud.donation import donation_crud
 from app.schemas.charity_project import (CharityProjectCreate,
@@ -39,6 +40,7 @@ PROJECT_NOT_FOUND_RESPONSE = error_response(PROJECT_NOT_FOUND_DESCRIPTION)
             NOT_UNIQUE_NAME_DESCRIPTION, NOT_UNIQUE_NAME_EXAMPLE
         ),
     },
+    dependencies=[Depends(current_superuser)],
 )
 async def create_charity_project(
         charity_project: CharityProjectCreate,
@@ -86,6 +88,7 @@ async def get_all_charity_projects(
         ),
         HTTPStatus.NOT_FOUND.value: PROJECT_NOT_FOUND_RESPONSE,
     },
+    dependencies=[Depends(current_superuser)],
 )
 async def update_charity_project(
         project_id: int,
@@ -128,6 +131,7 @@ async def update_charity_project(
         ),
         HTTPStatus.NOT_FOUND.value: PROJECT_NOT_FOUND_RESPONSE,
     },
+    dependencies=[Depends(current_superuser)],
 )
 async def delete_charity_project(
         project_id: int,

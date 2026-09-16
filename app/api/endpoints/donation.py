@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.api.deps import SessionDep
-from app.core.user import current_user
+from app.core.user import current_user, current_superuser
 from app.crud.charity_project import charity_project_crud
 from app.crud.donation import donation_crud
 from app.models import User
@@ -36,6 +36,7 @@ async def create_donation(
     '/',
     response_model=list[DonationFullInfoDB],
     response_model_exclude_none=True,
+    dependencies=[Depends(current_superuser)],
 )
 async def get_all_donations(
         session: SessionDep,
@@ -43,3 +44,17 @@ async def get_all_donations(
     """Показать список всех пожертвований."""
     donations = await donation_crud.get_multi(session)
     return donations
+
+
+@router.get(
+    '/my',
+    response_model=list[DonationDB],
+    response_model_exclude_none=True,
+)
+async def get_all_my_donations(
+        session: SessionDep,
+        user: Annotated[User, Depends(current_user)]
+):
+    """Показать список всех пожертвований текущего пользователя."""
+    my_donations = await donation_crud.get_my_donations(user.id, session)
+    return my_donations
