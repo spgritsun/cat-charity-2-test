@@ -140,6 +140,7 @@ copy .env.example .env        # Windows
 | `DESCRIPTION`               | нет         | Описание приложения в документации                    |
 | `DATABASE_URL`              | нет         | Строка подключения к базе данных                      |
 | `SECRET`                    | да          | Ключ для подписи JWT-токенов                          |
+| `JWT_LIFETIME_SECONDS`      | нет         | Время жизни JWT-токена в секундах (по умолчанию 3600) |
 | `FIRST_SUPERUSER_EMAIL`     | нет         | Email первого суперпользователя                       |
 | `FIRST_SUPERUSER_PASSWORD`  | нет         | Пароль первого суперпользователя                      |
 
