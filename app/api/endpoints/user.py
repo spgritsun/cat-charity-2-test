@@ -23,10 +23,19 @@ router.include_router(
     tags=['auth'],
 )
 
-# Подключаем роутер для управления пользователями, импортированный из
-# fastapi_users:
+users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
+users_router.routes = [
+    # У каждого эндпоинта в библиотеке FastAPI User есть "личное имя",
+    # оно устанавливается в параметре name эндпоинта.
+    # По этому имени можно обратиться к эндпоинту или "идентифицировать" его.
+    # Имя эндпоинта для удаления пользователей - 'users:delete_user'.
+    # Заново переподключаем к роутеру все эндпоинты,
+    # исключив эндпоинт для удаления пользователя.
+    route for route in users_router.routes if route.name != 'users:delete_user'
+]
+# Подключаем изменённый роутер по старому адресу.
 router.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
+    users_router,
     prefix='/users',
     tags=['users'],
 )
