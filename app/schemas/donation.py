@@ -15,4 +15,4 @@ class DonationDB(DonationCreate):
 
 
 class DonationFullInfoDB(DonationCreate, CharityDonationDB):
-    pass
+    user_id: int

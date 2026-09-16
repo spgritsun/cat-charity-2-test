@@ -9,4 +9,3 @@ from app.models.base import CharityDonationBase
 class Donation(CharityDonationBase):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('user.id'))
     comment: Mapped[Optional[str]] = mapped_column(Text)
-
