@@ -8,6 +8,10 @@ from fastapi import HTTPException
 from app.core.config import settings
 
 
+class YandexDiskError(Exception):
+    """Ошибка при работе с API Яндекс Диска."""
+
+
 class YandexDiskClient:
     """Универсальный клиент для API Яндекс Диска."""
     FOLDER_NAME = 'QRKot Reports'
@@ -47,7 +51,7 @@ class YandexDiskClient:
         upload_url = data.get('href')
 
         if not upload_url:
-            raise ValueError('Не удалось получить ссылку для загрузки')
+            raise YandexDiskError('Не удалось получить ссылку для загрузки')
 
         return upload_url, file_path
 
@@ -84,7 +88,7 @@ class YandexDiskClient:
         public_url = data.get('public_url')
 
         if not public_url:
-            raise ValueError(
+            raise YandexDiskError(
                 'Публичная ссылка не была получена со стороны '
                 'Яндекс Диска'
             )
