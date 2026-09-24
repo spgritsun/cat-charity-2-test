@@ -10,13 +10,13 @@ from app.core.yandex_client import YandexDiskClient
 
 
 def format_time_delta(delta: timedelta) -> str:
-    """Форматирует timedelta в строку 'X дн. Y ч.' или 'Y ч. Z мин.'"""
+    """Форматирует timedelta в строку 'X дн. Y ч.' или 'Y ч. Z мин.'."""
     days = delta.days
     hours, remainder = divmod(delta.seconds, 3600)
     minutes = remainder // 60
     if days:
-        return f"{days} дн. {hours} ч."
-    return f"{hours} ч. {minutes} мин."
+        return f'{days} дн. {hours} ч.'
+    return f'{hours} ч. {minutes} мин.'
 
 
 async def set_user_permissions(
