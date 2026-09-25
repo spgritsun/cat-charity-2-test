@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     first_superuser_email: Optional[EmailStr] = None
     first_superuser_password: Optional[str] = None
     yandex_disk_token: Optional[str] = None
-    report_format: str = "%Y/%m/%d %H:%M:%S"
+    report_format: str = "%d.%m.%Y_%H-%M-%S"
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra='ignore')
 
 

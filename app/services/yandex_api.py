@@ -1,16 +1,18 @@
-# ...app/services/yandex_api.py
 import io
+from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
 
 import xlsxwriter
 
 from app.core.config import settings
 from app.core.yandex_client import YandexDiskClient
+from app.models.charity_project import CharityProject
+
+HEADERS = ('Название проекта', 'Время сбора', 'Описание')
 
 
 def format_time_delta(delta: timedelta) -> str:
-    """Форматирует timedelta в строку 'X дн. Y ч.' или 'Y ч. Z мин.'."""
+    """Форматирует timedelta в строку вида 'X дн. Y ч.' или 'Y ч. Z мин.'."""
     days = delta.days
     hours, remainder = divmod(delta.seconds, 3600)
     minutes = remainder // 60
@@ -19,83 +21,79 @@ def format_time_delta(delta: timedelta) -> str:
     return f'{hours} ч. {minutes} мин.'
 
 
-async def set_user_permissions(
-        file_path: str,
-        yandex_client: YandexDiskClient
-) -> str:
-    """
-    Делает файл публичным и возвращает ссылку
-    (аналог set_user_permissions из Google-версии)
-    """
-    return await yandex_client.publish_file(file_path)
-
-
-async def spreadsheets_create(
+async def create_simple_report(
         yandex_client: YandexDiskClient,
-        folder: str = "Reports"
-) -> tuple[str, str]:
-    """
-    Создаёт Excel-файл и возвращает upload_url и file_path
-    (аналог spreadsheets_create из Google-версии)
-    """
+        projects_by_completion_rate: Sequence[CharityProject],
+) -> str:
+    """Формирует Excel-отчёт, загружает его на Диск и возвращает ссылку."""
     now_date_time = datetime.now().strftime(settings.report_format)
-    safe_filename = (f"Отчет_{now_date_time}".replace(':', '-')
-                     .replace(' ', '_').replace('/', '-'))
+    safe_filename = (
+        f'QRKot_report_{now_date_time}'
+        .replace(':', '-').replace(' ', '_').replace('/', '-')
+    )
+    upload_url, file_path = await yandex_client.create_excel_file(
+        safe_filename
+    )
 
-    upload_url, file_path = await yandex_client.create_spreadsheet(
-        safe_filename, folder)
-    return upload_url, file_path
-
-
-async def spreadsheets_update_value(
-        upload_url: str,
-        reservations: List[Dict[str, Any]],
-        yandex_client: YandexDiskClient
-) -> None:
-    """
-    Записывает данные в Excel-файл и загружает на Яндекс Диск
-    """
-    now_date_time = datetime.now().strftime(settings.report_format)
-
-    # Создаём Excel-файл в памяти
     output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output)
-    worksheet = workbook.add_worksheet("Отчет")
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    worksheet = workbook.add_worksheet('Отчёт')
 
     # Форматы
-    title_format = workbook.add_format({'bold': True, 'font_size': 14})
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 14,
+        'border': 1,
+        'align': 'center',
+    })
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#2F75B5',
         'font_color': 'white',
         'border': 1,
-        'align': 'center'
+        'align': 'center',
     })
     cell_format = workbook.add_format({'border': 1, 'align': 'center'})
+    description_format = workbook.add_format({
+        'border': 1,
+        'text_wrap': True,
+        'valign': 'top',
+    })
+    total_format = workbook.add_format({'bold': True, 'border': 1})
 
-    # Заголовок отчёта
-    worksheet.merge_range('A1:B1', f"Отчет от {now_date_time}", title_format)
+    # Строка 1: заголовок отчёта
+    worksheet.merge_range(
+        'A1:C1', f'Отчёт от {now_date_time}', title_format
+    )
 
-    # Объединённый заголовок "Количество регистраций переговорок" (A2:B2)
-    worksheet.merge_range('A2:B2', "Количество регистраций переговорок",
-                          header_format)
+    # Строка 2: заголовки колонок
+    for col, header in enumerate(HEADERS):
+        worksheet.write(1, col, header, header_format)
 
-    # Заголовки колонок (строка 3)
-    headers = ['ID переговорки', 'Кол-во бронирований']
-    for col, header in enumerate(headers):
-        worksheet.write(2, col, header, header_format)  # Строка 3 (индекс 2)
+    # Строки 3 и далее: данные проектов
+    for row, project in enumerate(projects_by_completion_rate, start=2):
+        project_duration = format_time_delta(
+            project.close_date - project.create_date
+        )
+        worksheet.write(row, 0, project.name, cell_format)
+        worksheet.write(row, 1, project_duration, cell_format)
+        worksheet.write(row, 2, project.description, description_format)
 
-    # Данные (начиная с 4-й строки)
-    for row, res in enumerate(reservations, start=3):
-        worksheet.write(row, 0, str(res['meetingroom_id']), cell_format)
-        worksheet.write(row, 1, str(res['count']), cell_format)
+    # Последняя строка: итог
+    total_row = 2 + len(projects_by_completion_rate)
+    worksheet.write(total_row, 0, 'Всего проектов', total_format)
+    worksheet.write(
+        total_row, 1, len(projects_by_completion_rate), total_format
+    )
+    worksheet.write_blank(total_row, 2, None, total_format)
 
-    # Настраиваем ширину колонок
-    worksheet.set_column('A:A', 20)
-    worksheet.set_column('B:B', 25)
+    # Ширина колонок
+    worksheet.set_column('A:A', 30)
+    worksheet.set_column('B:B', 20)
+    worksheet.set_column('C:C', 50)
 
     workbook.close()
     output.seek(0)
 
-    # Загружаем файл на Яндекс Диск
-    await yandex_client.upload_file(upload_url, output.getvalue())
+    await yandex_client.upload_file(upload_url, output.read())
+    return await yandex_client.publish_file(file_path)
