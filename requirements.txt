@@ -76,3 +76,4 @@ uvicorn==0.17.6
 virtualenv==20.26.1
 watchgod==0.8.2
 websockets==10.3
+XlsxWriter==3.2.0

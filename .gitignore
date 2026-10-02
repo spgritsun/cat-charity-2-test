@@ -132,5 +132,7 @@ dmypy.json
 .idea
 
 test.db
+*.db
 .vscode/
 qrkot.db
+venv-mcp/
