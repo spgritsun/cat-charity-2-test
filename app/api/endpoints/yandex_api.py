@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 
 import httpx
@@ -10,6 +11,7 @@ from app.core.yandex_client import (YandexDiskClient, YandexDiskError,
 from app.crud.charity_project import charity_project_crud
 from app.services.yandex_api import create_simple_report
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -45,6 +47,7 @@ async def create_report(
                                                 projects_by_completion_rate)
         return public_url
     except (httpx.HTTPError, YandexDiskError) as e:
+        logger.exception('Ошибка при создании отчёта')
         raise HTTPException(
             HTTPStatus.INTERNAL_SERVER_ERROR,
             detail='Ошибка при создании отчёта'
