@@ -28,6 +28,10 @@ API_URL = os.getenv('QRKOT_URL', 'http://127.0.0.1:8000').rstrip('/')
 EMAIL = os.getenv('QRKOT_EMAIL')
 PASSWORD = os.getenv('QRKOT_PASSWORD')
 REQUEST_TIMEOUT = 60.0  # отчёт на Яндекс Диске может формироваться долго
+# Для локального API не берём системный прокси Windows (VPN, прокси-программы):
+# иначе запрос к 127.0.0.1 может уйти через прокси и не дойти до uvicorn.
+USE_SYSTEM_PROXY = httpx.URL(API_URL).host not in (
+    'localhost', '127.0.0.1', '::1')
 
 # Подсказки для клиента: только чтение / безопасно повторять / опасно.
 # Клиенты MCP используют их, например, чтобы спросить подтверждение.
@@ -64,7 +68,8 @@ async def _login(client: httpx.AsyncClient) -> str:
     )
     if response.status_code != httpx.codes.OK:
         raise ToolError(
-            f'Не удалось войти в QRKot под {EMAIL}: проверьте email и пароль.'
+            f'Не удалось войти в QRKot под {EMAIL} '
+            f'({_error_text(response)}). Проверьте email и пароль.'
         )
     return response.json()['access_token']
 
@@ -98,7 +103,8 @@ async def api(method: str, path: str, **kwargs) -> Any:
     """
     global _token
     async with httpx.AsyncClient(
-            base_url=API_URL, timeout=REQUEST_TIMEOUT) as client:
+            base_url=API_URL, timeout=REQUEST_TIMEOUT,
+            trust_env=USE_SYSTEM_PROXY) as client:
         try:
             for attempt in range(2):
                 async with _login_lock:
